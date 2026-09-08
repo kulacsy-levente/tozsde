@@ -1,0 +1,536 @@
+/* =====================================================================
+   Tőzsdeszimulátor — felület
+   Bootstrap 5 sötét témára épül, csak azt egészíti ki, ami hiányzik.
+   ===================================================================== */
+
+:root {
+  --bg-0: #0b0e14;          /* legmélyebb háttér */
+  --bg-1: #11151f;          /* panelek */
+  --bg-2: #171d2b;          /* kiemelt sorok */
+  --bg-3: #1e2635;          /* hover */
+  --line: #232c3d;
+  --text: #d7dee9;
+  --muted: #7d899c;
+  --up: #26a69a;
+  --down: #ef5350;
+  --accent: #4c8dff;
+  --warn: #e3b341;
+
+  --topbar-h: 58px;
+  --bottom-h: 260px;
+}
+
+* { scrollbar-width: thin; scrollbar-color: #2c3646 transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: #2c3646; border-radius: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.num { font-variant-numeric: tabular-nums; }
+.up { color: var(--up) !important; }
+.down { color: var(--down) !important; }
+
+/* =====================================================================
+   Belépő képernyő
+   ===================================================================== */
+.auth-screen {
+  position: fixed; inset: 0; z-index: 1080;
+  display: grid; place-items: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(1000px 600px at 20% -10%, rgba(76,141,255,.16), transparent 60%),
+    radial-gradient(900px 500px at 90% 110%, rgba(38,166,154,.12), transparent 60%),
+    var(--bg-0);
+}
+
+.auth-card {
+  width: 100%; max-width: 420px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1.75rem;
+  box-shadow: 0 24px 60px rgba(0,0,0,.5);
+}
+
+.auth-brand {
+  display: flex; align-items: center; gap: .9rem;
+  margin-bottom: 1.5rem;
+}
+.auth-brand i { font-size: 2rem; color: var(--accent); }
+.auth-brand h1 { font-size: 1.3rem; margin: 0; font-weight: 650; }
+.auth-brand p { margin: 0; color: var(--muted); font-size: .85rem; }
+
+/* =====================================================================
+   Elrendezés
+   ===================================================================== */
+/*
+ * MIÉRT `minmax(0, 1fr)` ÉS NEM `1fr`?
+ *
+ * A rács- és flexsávok alapértelmezett legkisebb mérete `auto`, vagyis a
+ * tartalom min-content szélessége. A grafikonkönyvtár viszont PIXELBEN adja
+ * meg a vásznai szélességét, tehát a tartalom min-content igénye akkora
+ * marad, amekkora az ablak a legutóbbi rajzoláskor volt. Emiatt az oldal
+ * kinyílt a legszélesebb valaha látott méretre, és szűkítéskor nem engedett
+ * vissza — az egész elrendezés túllógott a képernyőn.
+ *
+ * A minmax(0, …) és a min-width: 0 megengedi a sávoknak a zsugorodást, így
+ * a grafikonok követik az ablakot ahelyett, hogy ők diktálnának.
+ */
+.app {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: var(--topbar-h) 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr) 320px;
+  gap: 1px;
+  background: var(--line);
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.panel {
+  background: var(--bg-1);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* =====================================================================
+   Fejléc
+   ===================================================================== */
+/*
+ * FONTOS: a fejlécen NEM lehet `overflow: hidden`.
+ * A profilmenü legördülője kilóg a fejléc alól, és az overflow levágná —
+ * pontosan ez okozta, hogy a menü „a többi elem alatt" volt. A túlcsordulást
+ * ezért a belső elemeken kezeljük (min-width + ellipszis), nem itt.
+ * A z-index pedig biztosítja, hogy a menü a panelek fölé kerüljön.
+ */
+.topbar {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0 .9rem;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  z-index: 30;
+}
+
+.topbar-brand {
+  display: flex; align-items: center; gap: .5rem;
+  font-weight: 700; letter-spacing: .3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.topbar-brand i { color: var(--accent); }
+
+.clock {
+  display: flex; align-items: center; gap: .45rem;
+  padding: .3rem .7rem;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.clock span { color: var(--text); }
+
+/* Ez a rugalmas sáv: ha kevés a hely, ez ad belőle, nem a gombok */
+.stat-strip {
+  display: flex; gap: 1.25rem;
+  margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.stat { display: flex; flex-direction: column; line-height: 1.25; white-space: nowrap; }
+.stat-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.stat-value { font-weight: 650; font-variant-numeric: tabular-nums; }
+
+.topbar-actions { display: flex; align-items: center; gap: .6rem; flex-shrink: 0; }
+
+.ff-group {
+  display: flex; align-items: center; gap: .3rem;
+  padding: .25rem .5rem .25rem .65rem;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.ff-label {
+  display: flex; align-items: center; gap: .35rem;
+  font-size: .7rem; color: var(--muted); margin-right: .25rem; white-space: nowrap;
+}
+.ff-group .btn {
+  --bs-btn-padding-y: .15rem; --bs-btn-padding-x: .45rem;
+  font-size: .76rem; white-space: nowrap;
+}
+
+/* A kiválasztott portfólió alcíme kék háttéren: a Bootstrap halványszürkéje
+   ott olvashatatlan lenne. */
+.dropdown-item.active small,
+.dropdown-item:active small { color: rgba(255, 255, 255, .8) !important; }
+.dropdown-menu { --bs-dropdown-min-width: 15rem; }
+
+/* =====================================================================
+   Eszközlista
+   ===================================================================== */
+.panel-head { padding: .7rem; border-bottom: 1px solid var(--line); }
+.market-filters .btn { font-size: .72rem; padding: .2rem .3rem; }
+
+.asset-list { overflow-y: auto; flex: 1; }
+
+.asset-row {
+  display: grid;
+  grid-template-columns: 1fr 56px auto;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .7rem;
+  border-bottom: 1px solid rgba(35,44,61,.5);
+  cursor: pointer;
+  transition: background .12s;
+}
+.asset-row:hover { background: var(--bg-2); }
+.asset-row.active { background: var(--bg-3); box-shadow: inset 3px 0 0 var(--accent); }
+
+.asset-id { min-width: 0; }
+.asset-symbol { font-weight: 650; display: flex; align-items: center; gap: .35rem; }
+.asset-name {
+  font-size: .72rem; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.asset-badge {
+  font-size: .55rem; padding: .05rem .25rem; border-radius: 3px;
+  background: var(--bg-3); color: var(--muted); text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.asset-spark { width: 56px; height: 24px; }
+.asset-figures { text-align: right; white-space: nowrap; }
+.asset-price { font-variant-numeric: tabular-nums; font-size: .82rem; }
+.asset-change { font-size: .72rem; font-variant-numeric: tabular-nums; }
+
+/* =====================================================================
+   Grafikon
+   ===================================================================== */
+.chart-head {
+  display: flex; align-items: center; gap: 1.25rem;
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--line);
+}
+.chart-title { display: flex; align-items: baseline; gap: .6rem; min-width: 0; }
+.chart-title h2 { font-size: 1.15rem; margin: 0; font-weight: 700; }
+.chart-title span { font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#chart-source { font-size: .6rem; background: var(--bg-3); color: var(--muted); }
+
+.chart-price { display: flex; align-items: baseline; gap: .6rem; }
+#chart-last { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.chart-price .change { font-size: .9rem; font-variant-numeric: tabular-nums; }
+
+.chart-controls { margin-left: auto; }
+.chart-controls .btn { font-size: .75rem; }
+
+.chart-body { position: relative; flex: 1; min-height: 0; }
+#chart { position: absolute; inset: 0; }
+
+.chart-loading {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center; gap: .6rem;
+  background: rgba(11,14,20,.75);
+  color: var(--muted);
+}
+
+.chart-foot {
+  padding: .35rem .9rem;
+  border-top: 1px solid var(--line);
+  min-height: 26px;
+}
+
+/* Tooltip a gyertyákhoz */
+.chart-tooltip {
+  position: absolute; z-index: 10; pointer-events: none;
+  background: rgba(17,21,31,.96);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: .5rem .65rem;
+  font-size: .74rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+.chart-tooltip .t-time { color: var(--muted); margin-bottom: .25rem; }
+.chart-tooltip .t-row { display: flex; justify-content: space-between; gap: 1.25rem; }
+.chart-tooltip .t-row span:first-child { color: var(--muted); }
+.chart-tooltip .t-news {
+  margin-top: .35rem; padding-top: .35rem;
+  border-top: 1px solid var(--line);
+  max-width: 260px; white-space: normal; color: var(--warn);
+}
+
+/* =====================================================================
+   Kereskedési panel
+   ===================================================================== */
+.trade-sides { border-bottom: 1px solid var(--line); }
+.trade-sides .btn {
+  border: 0; border-radius: 0;
+  padding: .6rem .5rem;
+  background: var(--bg-1);
+  color: var(--muted);
+  font-weight: 600;
+}
+.trade-sides .btn small { font-weight: 400; opacity: .7; }
+.trade-sides .btn.btn-buy.active  { background: rgba(38,166,154,.16); color: var(--up); box-shadow: inset 0 -2px 0 var(--up); }
+.trade-sides .btn.btn-sell.active { background: rgba(239,83,80,.16);  color: var(--down); box-shadow: inset 0 -2px 0 var(--down); }
+
+.trade-body { padding: .8rem; border-bottom: 1px solid var(--line); }
+
+.quick-amounts { display: flex; gap: .25rem; margin-top: .35rem; }
+.quick-amounts .btn { flex: 1; }
+.btn-xs { --bs-btn-padding-y: .1rem; --bs-btn-padding-x: .3rem; --bs-btn-font-size: .7rem; }
+
+.lev-scale {
+  display: flex; justify-content: space-between;
+  font-size: .65rem; color: var(--muted); margin-top: -.35rem;
+}
+
+.trade-preview { margin: .75rem 0 .6rem; font-size: .78rem; }
+.trade-preview > div { display: flex; justify-content: space-between; padding: .2rem 0; }
+.trade-preview dt { color: var(--muted); font-weight: 400; margin: 0; }
+.trade-preview dd { margin: 0; font-variant-numeric: tabular-nums; }
+.trade-preview .highlight { border-top: 1px solid var(--line); margin-top: .3rem; padding-top: .4rem; }
+.trade-preview .highlight dd { color: var(--warn); font-weight: 600; }
+
+.btn-buy  { background: var(--up);   border-color: var(--up);   color: #04211e; font-weight: 650; }
+.btn-buy:hover  { background: #2fbdaf; border-color: #2fbdaf; color: #04211e; }
+.btn-sell { background: var(--down); border-color: var(--down); color: #2b0a09; font-weight: 650; }
+.btn-sell:hover { background: #f4635f; border-color: #f4635f; color: #2b0a09; }
+
+/* Pozíciók */
+.positions { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.positions-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .5rem .8rem;
+  font-size: .75rem; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+.positions-list { overflow-y: auto; flex: 1; }
+
+.position {
+  padding: .55rem .8rem;
+  border-bottom: 1px solid rgba(35,44,61,.5);
+}
+.position:hover { background: var(--bg-2); }
+.position-top { display: flex; align-items: center; gap: .4rem; }
+.position-symbol { font-weight: 650; cursor: pointer; }
+.side-tag {
+  font-size: .6rem; padding: .05rem .3rem; border-radius: 3px;
+  text-transform: uppercase; letter-spacing: .5px; font-weight: 700;
+}
+.side-tag.long  { background: rgba(38,166,154,.2); color: var(--up); }
+.side-tag.short { background: rgba(239,83,80,.2);  color: var(--down); }
+.lev-tag { font-size: .6rem; color: var(--muted); }
+.position-pnl { margin-left: auto; font-weight: 650; font-variant-numeric: tabular-nums; }
+.position-meta {
+  display: flex; gap: .75rem; flex-wrap: wrap;
+  font-size: .68rem; color: var(--muted);
+  margin-top: .2rem;
+  font-variant-numeric: tabular-nums;
+}
+.position-actions { display: flex; gap: .25rem; margin-top: .35rem; }
+.position-actions .btn { flex: 1; }
+
+.empty-state {
+  padding: 2rem 1rem; text-align: center; color: var(--muted); font-size: .82rem;
+}
+.empty-state i { display: block; font-size: 1.6rem; margin-bottom: .5rem; opacity: .5; }
+
+/* =====================================================================
+   Alsó fülek
+   ===================================================================== */
+.bottom {
+  background: var(--bg-1);
+  border-top: 1px solid var(--line);
+  height: var(--bottom-h);
+  display: flex; flex-direction: column;
+  min-width: 0;
+  transition: height .18s ease;
+}
+.bottom.collapsed { height: 38px; }
+.bottom.collapsed .tab-body { display: none; }
+
+.bottom .nav-tabs { border-bottom: 1px solid var(--line); padding: 0 .5rem; flex-shrink: 0; }
+.bottom .nav-link {
+  border: 0; border-bottom: 2px solid transparent;
+  color: var(--muted); font-size: .8rem; padding: .5rem .8rem;
+}
+.bottom .nav-link.active { color: var(--text); border-bottom-color: var(--accent); background: transparent; }
+
+.tab-body { flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
+.tab-pane { display: none; height: 100%; min-width: 0; overflow-y: auto; }
+.tab-pane.active { display: block; }
+
+.portfolio-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) 300px;
+  height: 100%; gap: 1px; background: var(--line);
+  min-width: 0;
+}
+.equity-chart-wrap {
+  background: var(--bg-1); padding: .5rem .75rem;
+  display: flex; flex-direction: column;
+  min-height: 0; min-width: 0; overflow: hidden;
+}
+.pane-title { font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: .25rem; }
+#equity-chart { flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
+
+.portfolio-stats { background: var(--bg-1); padding: .75rem; overflow-y: auto; }
+.pstat { display: flex; justify-content: space-between; padding: .3rem 0; font-size: .8rem; border-bottom: 1px solid rgba(35,44,61,.5); }
+.pstat span:first-child { color: var(--muted); }
+.pstat span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.bottom table { font-size: .8rem; }
+.bottom table th { color: var(--muted); font-weight: 500; font-size: .7rem; text-transform: uppercase; letter-spacing: .4px; }
+.bottom table td { font-variant-numeric: tabular-nums; }
+
+.news-list { padding: .5rem .75rem; }
+.news-item {
+  display: flex; gap: .75rem; align-items: baseline;
+  padding: .45rem 0;
+  border-bottom: 1px solid rgba(35,44,61,.5);
+  font-size: .82rem;
+}
+.news-date { color: var(--muted); font-size: .72rem; white-space: nowrap; min-width: 82px; font-variant-numeric: tabular-nums; }
+.news-tag {
+  font-size: .62rem; font-weight: 700; padding: .1rem .35rem; border-radius: 3px;
+  background: var(--bg-3); white-space: nowrap; min-width: 62px; text-align: center;
+}
+.news-impact { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+
+.about { padding: .75rem 1.25rem; max-width: 900px; }
+.about h3 { font-size: .85rem; text-transform: uppercase; letter-spacing: .5px; color: var(--accent); margin: 1rem 0 .35rem; }
+.about h3:first-child { margin-top: 0; }
+.about p { font-size: .82rem; color: #b3bdcc; margin-bottom: .5rem; }
+
+/* =====================================================================
+   Visszaállítás párbeszéd
+   ===================================================================== */
+.reset-option {
+  display: flex; gap: .9rem; align-items: flex-start;
+  padding: .8rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: .6rem;
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.reset-option:hover { border-color: var(--accent); background: var(--bg-2); }
+.reset-option:last-child:hover { border-color: var(--down); }
+.reset-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--bg-3); border-radius: 8px; color: var(--accent);
+}
+.reset-option:last-child .reset-icon { color: var(--down); }
+.reset-option p { margin: .15rem 0 0; font-size: .78rem; color: var(--muted); }
+
+/* =====================================================================
+   Értesítések és várakozás
+   ===================================================================== */
+/*
+ * Az értesítések a fejléc alatt, jobbra jelennek meg.
+ * Korábban a jobb alsó sarokban voltak, ahol pont a portfólió-statisztikákat
+ * takarták el — vagyis azt, amit az ember egy előretekerés után elolvasna.
+ */
+.toast-stack {
+  position: fixed; right: 1rem; top: calc(var(--topbar-h) + .75rem); z-index: 1090;
+  display: flex; flex-direction: column; gap: .5rem;
+  max-width: 340px;
+  pointer-events: none;
+}
+.toast-stack > * { pointer-events: auto; }
+.toast-msg {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: .6rem .8rem;
+  font-size: .82rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+  animation: toast-in .18s ease;
+}
+.toast-msg.ok    { border-left-color: var(--up); }
+.toast-msg.error { border-left-color: var(--down); }
+.toast-msg.warn  { border-left-color: var(--warn); }
+.toast-msg strong { display: block; margin-bottom: .1rem; }
+.toast-msg.fade-out { opacity: 0; transform: translateX(12px); transition: all .25s; }
+
+@keyframes toast-in { from { opacity: 0; transform: translateX(16px); } }
+
+.busy {
+  position: fixed; inset: 0; z-index: 1085;
+  display: grid; place-items: center;
+  background: rgba(11,14,20,.7);
+  backdrop-filter: blur(2px);
+}
+.busy-card {
+  display: flex; flex-direction: column; align-items: center; gap: .9rem;
+  padding: 1.75rem 2.5rem;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+/* Ár-villanás a listában */
+@keyframes flash-up   { from { background: rgba(38,166,154,.25); } }
+@keyframes flash-down { from { background: rgba(239,83,80,.25); } }
+.flash-up   { animation: flash-up .5s ease; }
+.flash-down { animation: flash-down .5s ease; }
+
+/* =====================================================================
+   Kisebb képernyők
+   ===================================================================== */
+/*
+ * Szűkülő fejléc. Öt előretekerő gomb sokat elfoglal, ezért lépésenként
+ * a statisztikákból veszünk el helyet — először a felirattól, aztán a
+ * kevésbé fontos számoktól. A gombok mindig kiférnek.
+ */
+@media (max-width: 1650px) {
+  /* Csak a szöveg tűnik el, az ikon marad: így a gombcsoport nem válik
+     magyarázat nélküli számsorrá. */
+  .ff-text { display: none; }
+  .stat-strip { gap: 1rem; }
+}
+
+@media (max-width: 1450px) {
+  .stat-strip .stat:nth-child(3) { display: none; }   /* lekötött letét */
+}
+
+@media (max-width: 1280px) {
+  .layout { grid-template-columns: 240px minmax(0, 1fr) 285px; }
+  .stat-strip .stat:nth-child(2) { display: none; }   /* szabad készpénz */
+  .clock { font-size: .8rem; padding: .25rem .5rem; }
+}
+
+@media (max-width: 992px) {
+  html, body { overflow: auto; }
+  .app { height: auto; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .market-panel { max-height: 320px; }
+  .chart-panel { height: 460px; }
+  .topbar { flex-wrap: wrap; height: auto; padding: .5rem 1rem; gap: .75rem; }
+  .app { grid-template-rows: auto 1fr auto; }
+  .portfolio-grid { grid-template-columns: 1fr; }
+}

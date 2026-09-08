@@ -1,0 +1,20 @@
+# A program gyökere. A DocumentRoot ideális esetben erre a mappára mutat.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Ha valaki a mappa gyökerét kéri, az index.php-t kapja
+    DirectoryIndex index.php
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
+
+# A JSON válaszokat soha ne cache-elje a böngésző
+<FilesMatch "^api\.php$">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "no-store, no-cache, must-revalidate"
+    </IfModule>
+</FilesMatch>

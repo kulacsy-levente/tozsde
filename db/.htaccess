@@ -1,0 +1,11 @@
+# Ez a mappa nem érhető el a böngészőből.
+# Csak akkor számít, ha a teljes projektmappa került a htdocs alá —
+# ilyenkor ez akadályozza meg, hogy bárki letöltse az adatbázist vagy a forrást.
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
